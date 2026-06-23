@@ -37,3 +37,17 @@ def test_analyze_produces_query_dependency_edge(tmp_path):
     model = analyze(str(out))
     df = [(e.source, e.target) for e in model.edges if e.edge_type == "dataflow"]
     assert ("query:Q_元データ", "query:Q_売上") in df
+
+
+def test_analyze_survives_sheet_parse_failure(tmp_path, monkeypatch):
+    import xlsx_flow.parser.workbook as wbmod
+    out = tmp_path / "s.xlsx"
+    generate(str(out))
+
+    def boom(ws, pq_targets):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(wbmod, "classify_sheet", boom)
+    model = wbmod.analyze(str(out))
+    # No exception escaped; a Model came back with warnings recorded.
+    assert any("解析に失敗" in w for w in model.warnings)
