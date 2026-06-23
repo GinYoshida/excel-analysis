@@ -13,8 +13,10 @@ _SHEET_REF = re.compile(
 
 
 def cell_to_column_index(cell_ref: str) -> int:
-    letters = re.match(r"\$?([A-Z]+)", cell_ref).group(1)
-    return column_index_from_string(letters)
+    m = re.match(r"\$?([A-Z]+)", cell_ref)
+    if m is None:
+        raise ValueError(f"invalid cell reference: {cell_ref!r}")
+    return column_index_from_string(m.group(1))
 
 
 def extract_references(ws) -> list[dict]:

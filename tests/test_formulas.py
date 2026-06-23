@@ -26,3 +26,13 @@ def test_same_sheet_formula_ignored(tmp_path):
     refs = extract_references(ws)
     # =B3-C3 has no sheet qualifier, must not appear
     assert all(r["target_sheet"] for r in refs)
+
+
+def test_cell_to_column_index_handles_absolute_ref():
+    assert cell_to_column_index("$C$3") == 3
+
+
+def test_cell_to_column_index_raises_on_malformed():
+    import pytest
+    with pytest.raises(ValueError):
+        cell_to_column_index("not-a-ref")
