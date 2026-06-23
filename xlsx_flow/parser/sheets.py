@@ -1,7 +1,7 @@
 """Worksheet-level analysis: type classification and (Task 4) header recovery."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from openpyxl.utils import get_column_letter
 
 
@@ -61,7 +61,7 @@ def recover_headers(ws, max_header_rows: int = 3) -> list[LogicalColumn]:
                 parts.append(str(top))
             if has_merge:
                 child = ws.cell(row=header_rows, column=col).value
-                if child is not None and str(child) != "" and str(child) != parts[-1:] :
+                if child is not None and str(child) != "" and (not parts or parts[-1] != str(child)):
                     parts.append(str(child))
 
         if not parts:

@@ -54,3 +54,25 @@ def test_malformed_datamashup_warns_without_raising(tmp_path):
     queries, warnings = extract_powerquery(str(src))
     assert queries == []
     assert warnings  # a warning was recorded, no exception escaped
+
+
+def test_extract_finds_datamashup_under_xl_prefix(tmp_path):
+    import zipfile
+    import openpyxl
+    from xlsx_flow.parser.powerquery import extract_powerquery
+    from samples.gen_sample import _item_xml, SECTION_M
+
+    src = tmp_path / "xlprefix.xlsx"
+    openpyxl.Workbook().save(src)
+    with zipfile.ZipFile(src) as zin:
+        data = {i.filename: zin.read(i.filename) for i in zin.infolist()}
+    # Real Excel stores DataMashup under xl/customXml/, not bare customXml/
+    data["xl/customXml/item1.xml"] = _item_xml(SECTION_M).encode("utf-8")
+    with zipfile.ZipFile(src, "w", zipfile.ZIP_DEFLATED) as zout:
+        for name, payload in data.items():
+            zout.writestr(name, payload)
+
+    queries, warnings = extract_powerquery(str(src))
+    names = {q.name for q in queries}
+    assert "Q_元データ" in names
+    assert "Q_売上" in names

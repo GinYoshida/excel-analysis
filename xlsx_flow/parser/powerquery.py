@@ -40,7 +40,7 @@ def _read_section_m(xlsx_path: str, warnings: list[str]) -> str | None:
     try:
         with zipfile.ZipFile(xlsx_path) as z:
             items = [n for n in z.namelist()
-                     if n.startswith("customXml/item") and n.endswith(".xml")]
+                     if re.search(r"(^|/)customXml/item\d+\.xml$", n)]
             for name in items:
                 xml = z.read(name).decode("utf-8", errors="replace")
                 m = re.search(r"<DataMashup[^>]*>(.*?)</DataMashup>", xml, re.DOTALL)

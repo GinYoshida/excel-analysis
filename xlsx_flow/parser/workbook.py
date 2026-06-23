@@ -37,7 +37,11 @@ def analyze(xlsx_path: str) -> Model:
                                 edge_type="dataflow", granularity="pq"))
 
     # --- Workbook / sheets layer ---
-    wb = openpyxl.load_workbook(xlsx_path, data_only=False)
+    try:
+        wb = openpyxl.load_workbook(xlsx_path, data_only=False)
+    except Exception as exc:  # noqa: BLE001 - record, never crash
+        model.warn(f"ワークブックを開けませんでした: {exc}")
+        return model
     pq_targets = {name for name in wb.sheetnames if name in query_names}
 
     # Map sheet -> {col_index: LogicalColumn} for reference resolution.

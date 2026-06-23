@@ -51,3 +51,13 @@ def test_analyze_survives_sheet_parse_failure(tmp_path, monkeypatch):
     model = wbmod.analyze(str(out))
     # No exception escaped; a Model came back with warnings recorded.
     assert any("解析に失敗" in w for w in model.warnings)
+
+
+def test_analyze_survives_unreadable_file(tmp_path):
+    from xlsx_flow.parser.workbook import analyze
+    bad = tmp_path / "corrupt.xlsx"
+    bad.write_bytes(b"this is not a zip / xlsx")
+    model = analyze(str(bad))
+    # No exception escaped; a Model came back with a warning recorded.
+    assert isinstance(model.warnings, list)
+    assert model.warnings

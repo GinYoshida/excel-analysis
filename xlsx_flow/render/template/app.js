@@ -96,6 +96,14 @@
     d.innerHTML = "<h3>" + esc(label(n)) + "</h3>" + rows;
   });
 
+  cy.on("tap", "edge", function (evt) {
+    var e = evt.target.data();
+    var d = document.getElementById("detail");
+    d.innerHTML = "<h3>" + esc(e.etype) + "</h3>"
+      + "<div><b>" + esc(e.source) + " → " + esc(e.target) + "</b></div>"
+      + (e.detail ? "<pre>" + esc(e.detail) + "</pre>" : "<div>(詳細なし)</div>");
+  });
+
   document.querySelectorAll("#toolbar button[data-level]").forEach(function (b) {
     b.addEventListener("click", function () { setLevel(b.getAttribute("data-level")); });
   });

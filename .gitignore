@@ -8,3 +8,4 @@ dist/
 !tests/fixtures/*.xlsx
 out.html
 out.json
+.superpowers/
