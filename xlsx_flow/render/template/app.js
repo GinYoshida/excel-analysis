@@ -77,6 +77,7 @@
     cy.add(buildElements(level));
     cy.layout({ name: "breadthfirst", directed: true, padding: 20,
       spacingFactor: 1.1 }).run();
+    cy.resize();
     cy.fit(undefined, 30);
     var btns = document.querySelectorAll("#toolbar button[data-level]");
     btns.forEach(function (b) {
@@ -106,6 +107,13 @@
 
   document.querySelectorAll("#toolbar button[data-level]").forEach(function (b) {
     b.addEventListener("click", function () { setLevel(b.getAttribute("data-level")); });
+  });
+
+  // Re-fit when the container settles or the device rotates (mobile webviews
+  // sometimes report a zero/late size at first paint).
+  window.addEventListener("resize", function () {
+    cy.resize();
+    cy.fit(undefined, 30);
   });
 
   setLevel("L1");
