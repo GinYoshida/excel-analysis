@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xlsx-flow"
+version = "0.1.0"
+description = "Visualize Excel workbook data flow (merged cells, cross-sheet refs, PowerQuery) as interactive HTML"
+requires-python = ">=3.11"
+dependencies = ["openpyxl>=3.1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+xlsx-flow = "xlsx_flow.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["xlsx_flow*"]
+
+[tool.setuptools.package-data]
+xlsx_flow = ["render/template/*"]
