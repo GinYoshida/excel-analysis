@@ -28,8 +28,10 @@
 
 ## 注意
 
-`xlsx_flow/render/template/cytoscape.min.js` はオフライン描画のため vendoring
-している。スタブが入っている場合は実物の Cytoscape.js UMD ビルドに差し替えること。
+`xlsx_flow/render/template/cytoscape.min.js` はオフライン描画のため Cytoscape.js
+3.30.2 の UMD ビルドを vendoring している（出力 HTML にインライン展開される）。
+更新する場合は `npm pack cytoscape@<version>` で取得した `dist/cytoscape.min.js`
+で置き換える。
 
 ## スコープ
 
