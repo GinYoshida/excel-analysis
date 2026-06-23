@@ -1,0 +1,20 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Segoe UI", "Hiragino Sans", sans-serif; }
+#toolbar { padding: 8px 12px; background: #1f2937; color: #fff; display: flex;
+  gap: 8px; align-items: center; }
+#toolbar button { background: #374151; color: #fff; border: 1px solid #4b5563;
+  padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+#toolbar button.active { background: #2563eb; border-color: #3b82f6; }
+#warnings { background: #fef3c7; color: #92400e; padding: 6px 12px;
+  font-size: 13px; border-bottom: 1px solid #f59e0b; }
+#warnings:empty { display: none; }
+#main { display: flex; height: calc(100vh - 84px); }
+#cy { flex: 1; height: 100%; background: #f9fafb; }
+#detail { width: 320px; border-left: 1px solid #e5e7eb; padding: 12px;
+  overflow: auto; font-size: 13px; }
+#detail h3 { margin-top: 0; }
+#detail pre { white-space: pre-wrap; background: #f3f4f6; padding: 8px;
+  border-radius: 4px; }
+.legend span { display: inline-block; margin-right: 10px; font-size: 12px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  margin-right: 4px; vertical-align: middle; }

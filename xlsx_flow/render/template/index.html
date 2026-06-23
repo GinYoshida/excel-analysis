@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>xlsx-flow</title>
+<style>__STYLE_CSS__</style>
+</head>
+<body>
+<div id="toolbar">
+  <strong>xlsx-flow</strong>
+  <button data-level="L1">L1 フロー</button>
+  <button data-level="L2">L2 列</button>
+  <button data-level="L3">L3 セル</button>
+  <button data-level="PQ">PQ のみ</button>
+  <span class="legend" style="margin-left:auto">
+    <span><span class="dot" style="background:#22c55e"></span>生/raw</span>
+    <span><span class="dot" style="background:#f97316"></span>関数</span>
+    <span><span class="dot" style="background:#0ea5e9"></span>PQ</span>
+    <span><span class="dot" style="background:#a855f7"></span>外部源</span>
+  </span>
+</div>
+<div id="warnings">__WARNINGS_HTML__</div>
+<div id="main">
+  <div id="cy"></div>
+  <div id="detail"><h3>詳細</h3><div>ノードをクリックすると表示されます。</div></div>
+</div>
+<script>__CYTOSCAPE_JS__</script>
+<script>var MODEL = __MODEL_JSON__;</script>
+<script>__APP_JS__</script>
+</body>
+</html>
