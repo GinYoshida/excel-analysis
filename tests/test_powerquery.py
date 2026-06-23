@@ -1,0 +1,32 @@
+from xlsx_flow.parser.powerquery import extract_powerquery, _split_queries
+from samples.gen_sample import generate, SECTION_M
+
+
+def test_split_queries_finds_both_names():
+    pairs = _split_queries(SECTION_M)
+    names = {n for n, _ in pairs}
+    assert "Q_元データ" in names
+    assert "Q_売上" in names
+
+
+def test_extract_finds_source_and_dependency(tmp_path):
+    out = tmp_path / "s.xlsx"
+    generate(str(out))
+    queries, warnings = extract_powerquery(str(out))
+    by_name = {q.name: q for q in queries}
+    assert "Q_元データ" in by_name
+    assert "Q_売上" in by_name
+    # Q_元データ reads a Csv source
+    assert any("Csv.Document" in s or "File.Contents" in s for s in by_name["Q_元データ"].sources)
+    # Q_売上 references Q_元データ
+    assert "Q_元データ" in by_name["Q_売上"].refs
+
+
+def test_missing_datamashup_returns_warning(tmp_path):
+    import openpyxl
+    out = tmp_path / "plain.xlsx"
+    wb = openpyxl.Workbook()
+    wb.save(out)
+    queries, warnings = extract_powerquery(str(out))
+    assert queries == []
+    assert warnings  # at least one warning, no exception
