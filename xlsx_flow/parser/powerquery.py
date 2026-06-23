@@ -53,7 +53,7 @@ def _read_section_m(xlsx_path: str, warnings: list[str]) -> str | None:
                         return pz.read("Formulas/Section1.m").decode("utf-8")
                 except Exception as exc:  # noqa: BLE001 - report, never crash
                     warnings.append(f"DataMashup の復号に失敗: {exc}")
-                    return None
+                    continue
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"xlsx を zip として開けませんでした: {exc}")
         return None

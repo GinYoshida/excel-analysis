@@ -30,3 +30,27 @@ def test_missing_datamashup_returns_warning(tmp_path):
     queries, warnings = extract_powerquery(str(out))
     assert queries == []
     assert warnings  # at least one warning, no exception
+
+
+def test_malformed_datamashup_warns_without_raising(tmp_path):
+    import zipfile
+    import openpyxl
+    from xlsx_flow.parser.powerquery import extract_powerquery
+
+    src = tmp_path / "bad.xlsx"
+    openpyxl.Workbook().save(src)
+    # read existing entries, then rewrite the zip adding a bogus DataMashup item
+    with zipfile.ZipFile(src) as zin:
+        data = {i.filename: zin.read(i.filename) for i in zin.infolist()}
+    data["customXml/item1.xml"] = (
+        b'<?xml version="1.0"?>'
+        b'<DataMashup xmlns="http://schemas.microsoft.com/DataMashup">'
+        b'!!!not-valid-base64!!!</DataMashup>'
+    )
+    with zipfile.ZipFile(src, "w", zipfile.ZIP_DEFLATED) as zout:
+        for name, payload in data.items():
+            zout.writestr(name, payload)
+
+    queries, warnings = extract_powerquery(str(src))
+    assert queries == []
+    assert warnings  # a warning was recorded, no exception escaped
