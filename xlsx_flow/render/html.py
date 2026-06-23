@@ -24,6 +24,9 @@ def _warnings_html(warnings: list[str]) -> str:
 def render_html(model: Model) -> str:
     template = _read("index.html")
     model_json = json.dumps(model.to_dict(), ensure_ascii=False)
+    # Escape "</" so a "</script>" inside any string value (e.g. m_code)
+    # cannot terminate the inline <script> block that embeds MODEL.
+    model_json = model_json.replace("</", "<\\/")
     replacements = {
         "__STYLE_CSS__": _read("style.css"),
         "__CYTOSCAPE_JS__": _read("cytoscape.min.js"),

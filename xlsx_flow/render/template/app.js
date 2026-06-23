@@ -8,6 +8,11 @@
     pq_output: "#0ea5e9", mixed: "#ef4444",
   };
 
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
   function nodeColor(n) {
     if (n.type === "sheet" && n.sheet_type) {
       return SHEET_TYPE_COLOR[n.sheet_type] || TYPE_COLOR.sheet;
@@ -86,9 +91,9 @@
       .map(function (k) {
         var v = n[k];
         if (typeof v === "object") v = JSON.stringify(v);
-        return "<div><b>" + k + ":</b> " + String(v) + "</div>";
+        return "<div><b>" + esc(k) + ":</b> " + esc(v) + "</div>";
       }).join("");
-    d.innerHTML = "<h3>" + label(n) + "</h3>" + rows;
+    d.innerHTML = "<h3>" + esc(label(n)) + "</h3>" + rows;
   });
 
   document.querySelectorAll("#toolbar button[data-level]").forEach(function (b) {

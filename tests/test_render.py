@@ -33,3 +33,15 @@ def test_render_has_granularity_controls():
     html = render_html(_model())
     for level in ("L1", "L2", "L3", "PQ"):
         assert level in html
+
+
+def test_render_escapes_script_close_in_model():
+    from xlsx_flow.model import Model, Node
+    m = Model(file="s.xlsx")
+    m.add_node(Node(id="query:Q", type="query",
+                    attrs={"m_code": "let x = </script><img src=x onerror=alert(1)> in x"}))
+    html = render_html(m)
+    # The raw, dangerous sequence must not survive into the output.
+    assert "</script><img" not in html
+    # The escaped form is present instead.
+    assert "<\\/script><img" in html
