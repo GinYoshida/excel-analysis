@@ -37,11 +37,19 @@
     var spec = LEVELS[level];
     var nodeOk = {};
     var els = [];
+    // First pass: decide which nodes are visible so parent links can be checked.
     MODEL.nodes.forEach(function (n) {
-      if (spec.nodes.indexOf(n.type) === -1) return;
-      nodeOk[n.id] = true;
-      els.push({ data: { id: n.id, label: label(n), color: nodeColor(n),
-        raw: n }, classes: n.type });
+      if (spec.nodes.indexOf(n.type) !== -1) nodeOk[n.id] = true;
+    });
+    // Second pass: build node elements; columns nest under their sheet (compound).
+    MODEL.nodes.forEach(function (n) {
+      if (!nodeOk[n.id]) return;
+      var data = { id: n.id, label: label(n), color: nodeColor(n), raw: n };
+      if (n.type === "column" && n.sheet) {
+        var parentId = "sheet:" + n.sheet;
+        if (nodeOk[parentId]) data.parent = parentId;
+      }
+      els.push({ data: data, classes: n.type });
     });
     MODEL.edges.forEach(function (e, i) {
       if (spec.edges.indexOf(e.granularity) === -1) return;
@@ -57,26 +65,49 @@
     style: [
       { selector: "node", style: {
         "background-color": "data(color)", "label": "data(label)",
-        "font-size": "11px", "text-valign": "center", "color": "#111",
+        "font-size": "12px", "text-valign": "center", "color": "#111",
         "text-outline-color": "#fff", "text-outline-width": 2,
-        "width": "label", "padding": "8px", "shape": "round-rectangle" } },
+        "width": "label", "height": "label", "padding": "10px",
+        "shape": "round-rectangle" } },
       { selector: "node.query", style: { "shape": "round-tag" } },
       { selector: "node.source", style: { "shape": "barrel" } },
+      // Sheet acts as a container box when it holds columns (L2/L3).
+      { selector: ":parent", style: {
+        "background-color": "data(color)", "background-opacity": 0.12,
+        "border-color": "data(color)", "border-width": 2,
+        "label": "data(label)", "text-valign": "top", "text-halign": "center",
+        "font-size": "13px", "font-weight": "bold", "color": "#111",
+        "text-outline-color": "#fff", "text-outline-width": 2,
+        "padding": "16px", "shape": "round-rectangle" } },
+      { selector: "node:selected", style: {
+        "border-width": 3, "border-color": "#2563eb" } },
       { selector: "edge", style: {
         "width": 1.5, "line-color": "#9ca3af", "target-arrow-color": "#9ca3af",
         "target-arrow-shape": "triangle", "curve-style": "bezier" } },
       { selector: 'edge[etype="reference"]', style: {
         "line-style": "dashed", "line-color": "#3b82f6",
         "target-arrow-color": "#3b82f6" } },
+      { selector: "edge:selected", style: {
+        "width": 3, "line-color": "#2563eb", "target-arrow-color": "#2563eb" } },
     ],
     elements: [],
   });
 
+  function runLayout() {
+    // cose respects compound (sheet) containers; breadthfirst gives a clean
+    // directed flow when there are no nested columns (L1 / PQ).
+    var hasCompound = cy.nodes().some(function (n) { return n.isParent(); });
+    var opts = hasCompound
+      ? { name: "cose", padding: 24, animate: false, nodeDimensionsIncludeLabels: true,
+          idealEdgeLength: 70, nodeRepulsion: 9000, nestingFactor: 1.1 }
+      : { name: "breadthfirst", directed: true, padding: 24, spacingFactor: 1.15 };
+    cy.layout(opts).run();
+  }
+
   function setLevel(level) {
     cy.elements().remove();
     cy.add(buildElements(level));
-    cy.layout({ name: "breadthfirst", directed: true, padding: 20,
-      spacingFactor: 1.1 }).run();
+    runLayout();
     cy.resize();
     cy.fit(undefined, 30);
     var btns = document.querySelectorAll("#toolbar button[data-level]");
@@ -85,24 +116,32 @@
     });
   }
 
+  function showDetail(html) {
+    var d = document.getElementById("detail");
+    d.innerHTML = html;
+    // On stacked (mobile) layout the panel sits below the graph; make sure a
+    // fresh selection is brought into view.
+    d.scrollTop = 0;
+    d.scrollIntoView({ block: "nearest" });
+  }
+
   cy.on("tap", "node", function (evt) {
     var n = evt.target.data("raw");
-    var d = document.getElementById("detail");
+    if (!n) return;  // compound parents created implicitly still carry raw
     var rows = Object.keys(n).filter(function (k) { return k !== "id"; })
       .map(function (k) {
         var v = n[k];
         if (typeof v === "object") v = JSON.stringify(v);
         return "<div><b>" + esc(k) + ":</b> " + esc(v) + "</div>";
       }).join("");
-    d.innerHTML = "<h3>" + esc(label(n)) + "</h3>" + rows;
+    showDetail("<h3>" + esc(label(n)) + "</h3>" + rows);
   });
 
   cy.on("tap", "edge", function (evt) {
     var e = evt.target.data();
-    var d = document.getElementById("detail");
-    d.innerHTML = "<h3>" + esc(e.etype) + "</h3>"
+    showDetail("<h3>" + esc(e.etype) + "</h3>"
       + "<div><b>" + esc(e.source) + " → " + esc(e.target) + "</b></div>"
-      + (e.detail ? "<pre>" + esc(e.detail) + "</pre>" : "<div>(詳細なし)</div>");
+      + (e.detail ? "<pre>" + esc(e.detail) + "</pre>" : "<div>(詳細なし)</div>"));
   });
 
   document.querySelectorAll("#toolbar button[data-level]").forEach(function (b) {
