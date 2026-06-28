@@ -17,6 +17,14 @@ body { margin: 0; display: flex; flex-direction: column;
 #detail h3 { margin-top: 0; }
 #detail pre { white-space: pre-wrap; word-break: break-word; background: #f3f4f6;
   padding: 8px; border-radius: 4px; }
+#detail .muted { color: #6b7280; font-size: 12px; margin: 8px 0 4px; }
+table.preview { border-collapse: collapse; width: 100%; font-size: 12px;
+  margin-bottom: 4px; }
+table.preview td { border: 1px solid #e5e7eb; padding: 3px 6px;
+  max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+table.preview td.f { font-family: ui-monospace, "SFMono-Regular", monospace;
+  color: #b45309; background: #fffbeb; }
 .legend span { display: inline-block; margin-right: 10px; font-size: 12px; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
   margin-right: 4px; vertical-align: middle; }

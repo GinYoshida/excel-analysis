@@ -13,6 +13,7 @@ class LogicalColumn:
     is_formula: bool = False
     confidence: str = "high"
     sheet: str = ""
+    data_start: int = 2
 
 
 def _horizontal_merges(ws) -> dict[int, tuple[int, int, str]]:
@@ -75,6 +76,7 @@ def recover_headers(ws, max_header_rows: int = 3) -> list[LogicalColumn]:
                 is_formula=is_formula,
                 confidence=confidence,
                 sheet=ws.title,
+                data_start=data_start,
             )
         )
     return cols

@@ -7,6 +7,7 @@ from xlsx_flow.model import Model, Node, Edge
 from xlsx_flow.parser.sheets import classify_sheet, recover_headers
 from xlsx_flow.parser.formulas import extract_references, cell_to_column_index
 from xlsx_flow.parser.powerquery import extract_powerquery
+from xlsx_flow.parser.preview import sheet_preview, column_preview
 
 
 def _col_id(sheet: str, header_path: list[str]) -> str:
@@ -53,14 +54,16 @@ def analyze(xlsx_path: str) -> Model:
             has_merged = bool(ws.merged_cells.ranges)
             model.add_node(Node(id=f"sheet:{ws.title}", type="sheet",
                                 attrs={"sheet_type": stype, "has_merged": has_merged,
-                                       "formula_ratio": round(detail["formula_ratio"], 3)}))
+                                       "formula_ratio": round(detail["formula_ratio"], 3),
+                                       "preview": sheet_preview(ws)}))
             cols = recover_headers(ws)
             sheet_cols[ws.title] = {c.col_index: c.header_path for c in cols}
             for c in cols:
                 model.add_node(Node(
                     id=_col_id(ws.title, c.header_path), type="column",
                     attrs={"sheet": ws.title, "header_path": c.header_path,
-                           "is_formula": c.is_formula, "confidence": c.confidence}))
+                           "is_formula": c.is_formula, "confidence": c.confidence,
+                           "preview": column_preview(ws, c.col_index, c.data_start)}))
         except Exception as exc:  # noqa: BLE001 - record, never crash
             model.warn(f"シート '{ws.title}' の解析に失敗: {exc}")
 

@@ -125,16 +125,53 @@
     d.scrollIntoView({ block: "nearest" });
   }
 
+  // Render a sheet preview grid (values + formulas) as a compact HTML table.
+  function sheetPreviewHtml(p) {
+    if (!p || !p.cells || !p.cells.length) return "";
+    var body = p.cells.map(function (row) {
+      return "<tr>" + row.map(function (c) {
+        var isF = typeof c === "string" && c.charAt(0) === "=";
+        return "<td" + (isF ? ' class="f"' : "") + ">" + esc(c) + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    var note = "<div class=\"muted\">" + p.dims.rows + "行 × " + p.dims.cols + "列"
+      + (p.truncated ? "（先頭のみ表示）" : "") + "</div>";
+    return note + "<table class=\"preview\">" + body + "</table>";
+  }
+
+  // Render a column preview: range, sample values, and a formula example.
+  function columnPreviewHtml(p) {
+    if (!p) return "";
+    var out = "<div class=\"muted\">範囲 " + esc(p.range) + "</div>";
+    if (p.samples && p.samples.length) {
+      out += "<table class=\"preview\">" + p.samples.map(function (v) {
+        var isF = typeof v === "string" && v.charAt(0) === "=";
+        return "<tr><td" + (isF ? ' class="f"' : "") + ">" + esc(v) + "</td></tr>";
+      }).join("") + "</table>";
+    }
+    if (p.formula_example) {
+      out += "<div class=\"muted\">数式例</div><pre>" + esc(p.formula_example) + "</pre>";
+    }
+    return out;
+  }
+
   cy.on("tap", "node", function (evt) {
     var n = evt.target.data("raw");
     if (!n) return;  // compound parents created implicitly still carry raw
-    var rows = Object.keys(n).filter(function (k) { return k !== "id"; })
-      .map(function (k) {
+    var previewHtml = "";
+    if (n.preview) {
+      previewHtml = n.type === "sheet"
+        ? sheetPreviewHtml(n.preview)
+        : columnPreviewHtml(n.preview);
+    }
+    var rows = Object.keys(n).filter(function (k) {
+      return k !== "id" && k !== "preview";
+    }).map(function (k) {
         var v = n[k];
         if (typeof v === "object") v = JSON.stringify(v);
         return "<div><b>" + esc(k) + ":</b> " + esc(v) + "</div>";
       }).join("");
-    showDetail("<h3>" + esc(label(n)) + "</h3>" + rows);
+    showDetail("<h3>" + esc(label(n)) + "</h3>" + rows + previewHtml);
   });
 
   cy.on("tap", "edge", function (evt) {
