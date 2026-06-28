@@ -90,3 +90,15 @@ def test_analyze_creates_pq_step_nodes_and_edges(tmp_path):
     assert added.attrs["query"] == "Q_売上"
     df = {(e.source, e.target) for e in model.edges if e.edge_type == "dataflow"}
     assert ("step:Q_売上/Source", "step:Q_売上/Added") in df
+
+
+def test_analyze_produces_l3_cell_edges(tmp_path):
+    out = tmp_path / "s.xlsx"
+    generate(str(out))
+    model = analyze(str(out))
+    l3 = {(e.source, e.target) for e in model.edges if e.granularity == "L3"}
+    # same-sheet: B3 -> D3 ; cross-sheet: 生データ!C3 -> 売上集計!B4
+    assert ("cell:売上集計!B3", "cell:売上集計!D3") in l3
+    assert ("cell:生データ!C3", "cell:売上集計!B4") in l3
+    cell_nodes = {n.id for n in model.nodes if n.type == "cell"}
+    assert "cell:売上集計!D3" in cell_nodes

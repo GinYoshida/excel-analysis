@@ -2,7 +2,7 @@
 (function () {
   var TYPE_COLOR = {
     source: "#a855f7", query: "#0ea5e9", sheet: "#22c55e", column: "#94a3b8",
-    range: "#14b8a6", step: "#7dd3fc",
+    range: "#14b8a6", step: "#7dd3fc", cell: "#cbd5e1",
   };
   var SHEET_TYPE_COLOR = {
     raw: "#22c55e", pasted: "#eab308", formula: "#f97316",
@@ -18,12 +18,14 @@
     if (n.type === "sheet" && n.sheet_type) {
       return SHEET_TYPE_COLOR[n.sheet_type] || TYPE_COLOR.sheet;
     }
+    if (n.type === "cell" && n.is_formula) return "#fcd34d";  // formula cells stand out
     return TYPE_COLOR[n.type] || "#9ca3af";
   }
 
   function label(n) {
     if (n.type === "column" && n.header_path) return n.header_path.join(" / ");
     if (n.type === "step" && n.name) return n.name;
+    if (n.type === "cell" && n.addr) return n.addr;
     return n.id.split(":").slice(1).join(":");
   }
 
@@ -31,7 +33,7 @@
   var LEVELS = {
     L1: { nodes: ["source", "query", "sheet", "range"], edges: ["L1", "pq"] },
     L2: { nodes: ["source", "query", "sheet", "column", "range"], edges: ["L1", "L2", "pq"] },
-    L3: { nodes: ["source", "query", "sheet", "column", "range"], edges: ["L1", "L2", "L3", "pq"] },
+    L3: { nodes: ["source", "query", "sheet", "range", "cell"], edges: ["L3", "pq"] },
     PQ: { nodes: ["source", "query", "range", "step"], edges: ["pq", "step"] },
   };
 
@@ -54,6 +56,10 @@
       if (n.type === "step" && n.query) {
         var qid = "query:" + n.query;
         if (nodeOk[qid]) data.parent = qid;
+      }
+      if (n.type === "cell" && n.sheet) {
+        var csid = "sheet:" + n.sheet;
+        if (nodeOk[csid]) data.parent = csid;
       }
       els.push({ data: data, classes: n.type });
     });
@@ -79,6 +85,7 @@
       { selector: "node.source", style: { "shape": "barrel" } },
       { selector: "node.range", style: { "shape": "cut-rectangle" } },
       { selector: "node.step", style: { "shape": "ellipse" } },
+      { selector: "node.cell", style: { "shape": "round-rectangle", "font-size": "11px" } },
       // Sheet acts as a container box when it holds columns (L2/L3).
       { selector: ":parent", style: {
         "background-color": "data(color)", "background-opacity": 0.12,
@@ -173,9 +180,11 @@
         : columnPreviewHtml(n.preview);
     } else if (n.type === "step" && n.expr) {
       previewHtml = "<div class=\"muted\">Mステップ式</div><pre>" + esc(n.expr) + "</pre>";
+    } else if (n.type === "cell" && n.formula) {
+      previewHtml = "<div class=\"muted\">数式</div><pre>" + esc(n.formula) + "</pre>";
     }
     var rows = Object.keys(n).filter(function (k) {
-      return k !== "id" && k !== "preview" && k !== "expr";
+      return k !== "id" && k !== "preview" && k !== "expr" && k !== "formula";
     }).map(function (k) {
         var v = n[k];
         if (typeof v === "object") v = JSON.stringify(v);

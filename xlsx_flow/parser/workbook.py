@@ -5,7 +5,8 @@ import openpyxl
 
 from xlsx_flow.model import Model, Node, Edge
 from xlsx_flow.parser.sheets import classify_sheet, recover_headers
-from xlsx_flow.parser.formulas import extract_references, cell_to_column_index
+from xlsx_flow.parser.formulas import (
+    extract_references, cell_to_column_index, extract_cell_dependencies)
 from xlsx_flow.parser.powerquery import extract_powerquery, decompose_steps
 from xlsx_flow.parser.preview import sheet_preview, column_preview
 
@@ -164,4 +165,62 @@ def analyze(xlsx_path: str) -> Model:
         except Exception as exc:  # noqa: BLE001 - record, never crash
             model.warn(f"シート '{ws.title}' の参照解析に失敗: {exc}")
 
+    # --- L3: cell/range-level formula dependencies (capped to avoid blowup) ---
+    _add_cell_dependencies(model, wb, sheet_titles)
+
     return model
+
+
+_CELL_BUDGET = 400
+
+
+def _add_cell_dependencies(model: Model, wb, sheet_titles: set[str]) -> None:
+    """Build cell/range nodes and L3 dependency edges from formulas, bounded by
+    a node budget so a large workbook cannot explode the embedded model."""
+    cells: dict[str, Node] = {}
+    truncated = False
+
+    def ensure(sheet: str, addr: str) -> str | None:
+        nonlocal truncated
+        cid = f"cell:{sheet}!{addr}"
+        if cid in cells:
+            return cid
+        if len(cells) >= _CELL_BUDGET:
+            truncated = True
+            return None
+        attrs: dict = {"sheet": sheet, "addr": addr,
+                       "is_range": ":" in addr}
+        if sheet in wb.sheetnames and ":" not in addr:
+            try:
+                from xlsx_flow.parser.preview import cell_display
+                attrs["value"] = cell_display(wb[sheet][addr])
+            except Exception:  # noqa: BLE001 - value is best-effort
+                pass
+        node = Node(id=cid, type="cell", attrs=attrs)
+        cells[cid] = node
+        model.add_node(node)
+        return cid
+
+    for ws in wb.worksheets:
+        try:
+            for dep in extract_cell_dependencies(ws):
+                tgt = ensure(ws.title, dep["src_cell"])
+                if tgt is None:
+                    continue
+                cells[tgt].attrs["is_formula"] = True
+                cells[tgt].attrs["formula"] = dep["formula"]
+                for p in dep["precedents"]:
+                    psheet = p["sheet"] or ws.title
+                    if psheet not in sheet_titles:
+                        continue  # external/unknown sheet — skip
+                    src = ensure(psheet, p["ref"])
+                    if src is None:
+                        continue
+                    model.add_edge(Edge(source=src, target=tgt,
+                                        edge_type="reference", granularity="L3",
+                                        detail=dep["formula"]))
+        except Exception as exc:  # noqa: BLE001 - record, never crash
+            model.warn(f"シート '{ws.title}' のセル依存解析に失敗: {exc}")
+
+    if truncated:
+        model.warn(f"L3セル依存はノード上限({_CELL_BUDGET})に達したため一部のみ表示します")
