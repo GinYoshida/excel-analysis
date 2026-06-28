@@ -14,6 +14,32 @@ def _col_id(sheet: str, header_path: list[str]) -> str:
     return "col:" + sheet + "/" + "/".join(header_path)
 
 
+def _build_entity_index(wb) -> dict[str, dict]:
+    """Map in-workbook entity name -> {kind, sheet, ref} for Excel Tables and
+    named ranges, so PowerQuery's Excel.CurrentWorkbook references resolve to a
+    real sheet/range. Tables take precedence over equally-named ranges."""
+    idx: dict[str, dict] = {}
+    for ws in wb.worksheets:
+        try:
+            for tname in ws.tables:
+                tbl = ws.tables[tname]
+                idx[tname] = {"kind": "table", "sheet": ws.title,
+                              "ref": getattr(tbl, "ref", str(tbl))}
+        except Exception:  # noqa: BLE001 - best-effort enrichment
+            continue
+    try:
+        for name in wb.defined_names:
+            dn = wb.defined_names[name]
+            dests = list(dn.destinations)
+            if dests and name not in idx:
+                sheet, ref = dests[0]
+                idx[name] = {"kind": "named_range", "sheet": sheet,
+                             "ref": ref.replace("$", "")}
+    except Exception:  # noqa: BLE001
+        pass
+    return idx
+
+
 def analyze(xlsx_path: str) -> Model:
     model = Model(file=xlsx_path)
 
@@ -25,14 +51,16 @@ def analyze(xlsx_path: str) -> Model:
     source_ids: set[str] = set()
     for q in queries:
         model.add_node(Node(id=f"query:{q.name}", type="query",
-                            attrs={"m_code": q.m_code}))
+                            attrs={"m_code": q.m_code, "uris": q.uris}))
+        uri_detail = ", ".join(q.uris)
         for src in q.sources:
             sid = f"source:{src}"
             if sid not in source_ids:
                 model.add_node(Node(id=sid, type="source", attrs={"kind": "function"}))
                 source_ids.add(sid)
             model.add_edge(Edge(source=sid, target=f"query:{q.name}",
-                                edge_type="dataflow", granularity="pq"))
+                                edge_type="dataflow", granularity="pq",
+                                detail=uri_detail))
         for ref in q.refs:
             model.add_edge(Edge(source=f"query:{ref}", target=f"query:{q.name}",
                                 edge_type="dataflow", granularity="pq"))
@@ -71,6 +99,28 @@ def analyze(xlsx_path: str) -> Model:
     for q in queries:
         if q.name in wb.sheetnames:
             model.add_edge(Edge(source=f"query:{q.name}", target=f"sheet:{q.name}",
+                                edge_type="dataflow", granularity="pq"))
+
+    # PowerQuery Excel.CurrentWorkbook references -> real table / named range,
+    # resolved to the sheet they live on (slice ④ entity mapping).
+    entity_idx = _build_entity_index(wb)
+    sheet_ids = {f"sheet:{s.title}" for s in wb.worksheets}
+    entity_ids: set[str] = set()
+    for q in queries:
+        for ent in q.wb_entities:
+            eid = f"range:{ent}"
+            info = entity_idx.get(ent)
+            if eid not in entity_ids:
+                attrs = {"name": ent, "kind": info["kind"] if info else "unresolved"}
+                if info:
+                    attrs.update(sheet=info["sheet"], ref=info["ref"])
+                model.add_node(Node(id=eid, type="range", attrs=attrs))
+                entity_ids.add(eid)
+                if info and f"sheet:{info['sheet']}" in sheet_ids:
+                    model.add_edge(Edge(source=f"sheet:{info['sheet']}", target=eid,
+                                        edge_type="dataflow", granularity="pq",
+                                        detail=info["ref"]))
+            model.add_edge(Edge(source=eid, target=f"query:{q.name}",
                                 edge_type="dataflow", granularity="pq"))
 
     # --- Cross-sheet references ---

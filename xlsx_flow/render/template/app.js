@@ -2,6 +2,7 @@
 (function () {
   var TYPE_COLOR = {
     source: "#a855f7", query: "#0ea5e9", sheet: "#22c55e", column: "#94a3b8",
+    range: "#14b8a6",
   };
   var SHEET_TYPE_COLOR = {
     raw: "#22c55e", pasted: "#eab308", formula: "#f97316",
@@ -27,10 +28,10 @@
 
   // Which node types / edge granularities are visible at each level.
   var LEVELS = {
-    L1: { nodes: ["source", "query", "sheet"], edges: ["L1", "pq"] },
-    L2: { nodes: ["source", "query", "sheet", "column"], edges: ["L1", "L2", "pq"] },
-    L3: { nodes: ["source", "query", "sheet", "column"], edges: ["L1", "L2", "L3", "pq"] },
-    PQ: { nodes: ["source", "query"], edges: ["pq"] },
+    L1: { nodes: ["source", "query", "sheet", "range"], edges: ["L1", "pq"] },
+    L2: { nodes: ["source", "query", "sheet", "column", "range"], edges: ["L1", "L2", "pq"] },
+    L3: { nodes: ["source", "query", "sheet", "column", "range"], edges: ["L1", "L2", "L3", "pq"] },
+    PQ: { nodes: ["source", "query", "range"], edges: ["pq"] },
   };
 
   function buildElements(level) {
@@ -71,6 +72,7 @@
         "shape": "round-rectangle" } },
       { selector: "node.query", style: { "shape": "round-tag" } },
       { selector: "node.source", style: { "shape": "barrel" } },
+      { selector: "node.range", style: { "shape": "cut-rectangle" } },
       // Sheet acts as a container box when it holds columns (L2/L3).
       { selector: ":parent", style: {
         "background-color": "data(color)", "background-opacity": 0.12,

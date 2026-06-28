@@ -76,3 +76,12 @@ def test_extract_finds_datamashup_under_xl_prefix(tmp_path):
     names = {q.name for q in queries}
     assert "Q_元データ" in names
     assert "Q_売上" in names
+
+
+def test_extract_finds_wb_entity_and_uri(tmp_path):
+    out = tmp_path / "s.xlsx"
+    generate(str(out))
+    queries, _ = extract_powerquery(str(out))
+    by_name = {q.name: q for q in queries}
+    assert "T_値貼付" in by_name["Q_テーブル取込"].wb_entities
+    assert "sales.csv" in by_name["Q_元データ"].uris

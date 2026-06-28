@@ -61,3 +61,18 @@ def test_analyze_survives_unreadable_file(tmp_path):
     # No exception escaped; a Model came back with a warning recorded.
     assert isinstance(model.warnings, list)
     assert model.warnings
+
+
+def test_analyze_maps_pq_entity_to_real_sheet(tmp_path):
+    out = tmp_path / "s.xlsx"
+    generate(str(out))
+    model = analyze(str(out))
+    rng = next((n for n in model.nodes if n.id == "range:T_値貼付"), None)
+    assert rng is not None
+    assert rng.type == "range"
+    assert rng.attrs["sheet"] == "値貼り付け"
+    assert rng.attrs["ref"] == "A1:D3"
+    df = {(e.source, e.target) for e in model.edges if e.edge_type == "dataflow"}
+    # entity feeds the query, and the real sheet feeds the entity
+    assert ("range:T_値貼付", "query:Q_テーブル取込") in df
+    assert ("sheet:値貼り付け", "range:T_値貼付") in df

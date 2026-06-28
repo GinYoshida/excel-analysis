@@ -15,6 +15,7 @@ import zipfile
 
 import openpyxl
 from openpyxl.styles import Border, Side
+from openpyxl.worksheet.table import Table
 
 SECTION_M = """section Section1;
 
@@ -28,6 +29,11 @@ shared #"Q_売上" = let
     Added = Table.AddColumn(Source, "前月差", each [当月] - [前月])
 in
     Added;
+
+shared #"Q_テーブル取込" = let
+    Source = Excel.CurrentWorkbook(){[Name="T_値貼付"]}[Content]
+in
+    Source;
 """
 
 
@@ -104,6 +110,9 @@ def _build_workbook() -> openpyxl.Workbook:
     ws.append(["店舗", "当月", "前月", "前月差"])
     ws.append(["A店", 110, 100, 10])
     ws.append(["B店", 120, 130, -10])
+    # An Excel Table on this sheet, referenced by PowerQuery via
+    # Excel.CurrentWorkbook(){[Name="T_値貼付"]} (slice ④ entity mapping).
+    ws.add_table(Table(displayName="T_値貼付", ref="A1:D3"))
 
     # Sheet 4: 罫線表頭 (border-drawn pseudo header, no merge)
     ws = wb.create_sheet("罫線表頭")

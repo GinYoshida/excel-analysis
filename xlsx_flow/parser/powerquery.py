@@ -20,6 +20,23 @@ _SOURCE_FUNCS = [
 # shared NAME =   where NAME is  #"quoted"  or a bare identifier
 _QUERY_HEAD = re.compile(r'shared\s+(#"(?P<q>[^"]+)"|(?P<u>[A-Za-z_][A-Za-z0-9_.]*))\s*=')
 
+# Excel.CurrentWorkbook(){[Name="X"]} — an in-workbook table or named range.
+_WB_ENTITY = re.compile(
+    r'Excel\.CurrentWorkbook\(\)\s*\{\s*\[\s*Name\s*=\s*"([^"]+)"\s*\]\s*\}')
+
+# Literal file path / URL arguments to external source functions.
+_URI_ARG = re.compile(r'(?:File\.Contents|Web\.Contents)\(\s*"([^"]+)"')
+
+
+def _dedup(seq: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for x in seq:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
 
 @dataclass
 class Query:
@@ -27,6 +44,8 @@ class Query:
     m_code: str
     sources: list[str] = field(default_factory=list)
     refs: list[str] = field(default_factory=list)
+    wb_entities: list[str] = field(default_factory=list)
+    uris: list[str] = field(default_factory=list)
 
 
 def _decode_datamashup(raw_b64: str) -> bytes:
@@ -93,5 +112,8 @@ def extract_powerquery(xlsx_path: str) -> tuple[list[Query], list[str]]:
             pattern = r'#"' + re.escape(other) + r'"|(?<![\w.])' + re.escape(other) + r'(?![\w.])'
             if re.search(pattern, body):
                 refs.append(other)
-        queries.append(Query(name=name, m_code=body, sources=sources, refs=refs))
+        wb_entities = _dedup(_WB_ENTITY.findall(body))
+        uris = _dedup(_URI_ARG.findall(body))
+        queries.append(Query(name=name, m_code=body, sources=sources, refs=refs,
+                             wb_entities=wb_entities, uris=uris))
     return queries, warnings
