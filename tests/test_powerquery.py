@@ -85,3 +85,28 @@ def test_extract_finds_wb_entity_and_uri(tmp_path):
     by_name = {q.name: q for q in queries}
     assert "T_値貼付" in by_name["Q_テーブル取込"].wb_entities
     assert "sales.csv" in by_name["Q_元データ"].uris
+
+
+def test_decompose_steps_orders_and_links(tmp_path):
+    from xlsx_flow.parser.powerquery import decompose_steps
+    out = tmp_path / "s.xlsx"
+    generate(str(out))
+    queries, _ = extract_powerquery(str(out))
+    body = {q.name: q.m_code for q in queries}["Q_売上"]
+    steps = decompose_steps(body)
+    names = [s.name for s in steps]
+    assert names == ["Source", "Added"]
+    added = next(s for s in steps if s.name == "Added")
+    assert "Source" in added.refs
+
+
+def test_decompose_steps_handles_non_let():
+    from xlsx_flow.parser.powerquery import decompose_steps
+    assert decompose_steps('Excel.CurrentWorkbook(){[Name="X"]}[Content]') == []
+
+
+def test_decompose_steps_ignores_commas_in_brackets():
+    from xlsx_flow.parser.powerquery import decompose_steps
+    body = 'let\n  Source = Table.FromRows({{1,2},{3,4}}),\n  Out = Source\nin\n  Out'
+    steps = decompose_steps(body)
+    assert [s.name for s in steps] == ["Source", "Out"]

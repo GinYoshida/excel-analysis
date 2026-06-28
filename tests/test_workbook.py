@@ -76,3 +76,17 @@ def test_analyze_maps_pq_entity_to_real_sheet(tmp_path):
     # entity feeds the query, and the real sheet feeds the entity
     assert ("range:T_値貼付", "query:Q_テーブル取込") in df
     assert ("sheet:値貼り付け", "range:T_値貼付") in df
+
+
+def test_analyze_creates_pq_step_nodes_and_edges(tmp_path):
+    out = tmp_path / "s.xlsx"
+    generate(str(out))
+    model = analyze(str(out))
+    ids = {n.id for n in model.nodes}
+    assert "step:Q_売上/Source" in ids
+    assert "step:Q_売上/Added" in ids
+    added = next(n for n in model.nodes if n.id == "step:Q_売上/Added")
+    assert added.type == "step"
+    assert added.attrs["query"] == "Q_売上"
+    df = {(e.source, e.target) for e in model.edges if e.edge_type == "dataflow"}
+    assert ("step:Q_売上/Source", "step:Q_売上/Added") in df

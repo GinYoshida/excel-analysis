@@ -39,6 +39,110 @@ def _dedup(seq: list[str]) -> list[str]:
 
 
 @dataclass
+class Step:
+    name: str
+    expr: str
+    refs: list[str] = field(default_factory=list)
+
+
+def _refs_in(expr: str, candidates: list[str], exclude: str) -> list[str]:
+    out: list[str] = []
+    for other in candidates:
+        if other == exclude:
+            continue
+        patt = (r'#"' + re.escape(other) + r'"|(?<![\w.])'
+                + re.escape(other) + r'(?![\w.])')
+        if re.search(patt, expr):
+            out.append(other)
+    return out
+
+
+def _split_let_bindings(s: str) -> list[str]:
+    """Split the top-level bindings of a `let ... in ...` body, honouring
+    brackets, strings (incl. #"quoted" names), and nested let/in."""
+    m = re.match(r"\s*let\b", s)
+    if not m:
+        return []
+    i, n = m.end(), len(s)
+    depth = 0          # () [] {} nesting
+    let_depth = 0      # nested let..in nesting
+    buf: list[str] = []
+    bindings: list[str] = []
+    while i < n:
+        c = s[i]
+        if c == '"':  # string literal or #"quoted name" span
+            buf.append(c)
+            i += 1
+            while i < n:
+                buf.append(s[i])
+                if s[i] == '"':
+                    if i + 1 < n and s[i + 1] == '"':  # "" escape
+                        buf.append('"')
+                        i += 2
+                        continue
+                    i += 1
+                    break
+                i += 1
+            continue
+        if c in "([{":
+            depth += 1
+            buf.append(c)
+            i += 1
+            continue
+        if c in ")]}":
+            depth -= 1
+            buf.append(c)
+            i += 1
+            continue
+        if depth == 0 and (c.isalpha() or c == "_"):
+            j = i
+            while j < n and (s[j].isalnum() or s[j] in "_."):
+                j += 1
+            word = s[i:j]
+            if word == "let":
+                let_depth += 1
+            elif word == "in" and let_depth == 0:
+                bindings.append("".join(buf))
+                return bindings
+            elif word == "in":
+                let_depth -= 1
+            buf.append(word)
+            i = j
+            continue
+        if c == "," and depth == 0 and let_depth == 0:
+            bindings.append("".join(buf))
+            buf = []
+            i += 1
+            continue
+        buf.append(c)
+        i += 1
+    bindings.append("".join(buf))
+    return bindings
+
+
+_BINDING_HEAD = re.compile(
+    r'\s*(#"(?P<q>[^"]+)"|(?P<u>[A-Za-z_][A-Za-z0-9_.]*))\s*=(?P<expr>.*)',
+    re.DOTALL)
+
+
+def decompose_steps(m_code: str) -> list[Step]:
+    """Break a query's `let` body into ordered M steps with inter-step refs.
+    Returns [] for single-expression (non-let) queries."""
+    parsed: list[tuple[str, str]] = []
+    for b in _split_let_bindings(m_code):
+        if not b.strip():
+            continue
+        mm = _BINDING_HEAD.match(b)
+        if not mm:
+            continue
+        name = mm.group("q") or mm.group("u")
+        parsed.append((name, mm.group("expr").strip()))
+    names = [n for n, _ in parsed]
+    return [Step(name=name, expr=expr, refs=_refs_in(expr, names, name))
+            for name, expr in parsed]
+
+
+@dataclass
 class Query:
     name: str
     m_code: str

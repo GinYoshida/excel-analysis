@@ -2,7 +2,7 @@
 (function () {
   var TYPE_COLOR = {
     source: "#a855f7", query: "#0ea5e9", sheet: "#22c55e", column: "#94a3b8",
-    range: "#14b8a6",
+    range: "#14b8a6", step: "#7dd3fc",
   };
   var SHEET_TYPE_COLOR = {
     raw: "#22c55e", pasted: "#eab308", formula: "#f97316",
@@ -23,6 +23,7 @@
 
   function label(n) {
     if (n.type === "column" && n.header_path) return n.header_path.join(" / ");
+    if (n.type === "step" && n.name) return n.name;
     return n.id.split(":").slice(1).join(":");
   }
 
@@ -31,7 +32,7 @@
     L1: { nodes: ["source", "query", "sheet", "range"], edges: ["L1", "pq"] },
     L2: { nodes: ["source", "query", "sheet", "column", "range"], edges: ["L1", "L2", "pq"] },
     L3: { nodes: ["source", "query", "sheet", "column", "range"], edges: ["L1", "L2", "L3", "pq"] },
-    PQ: { nodes: ["source", "query", "range"], edges: ["pq"] },
+    PQ: { nodes: ["source", "query", "range", "step"], edges: ["pq", "step"] },
   };
 
   function buildElements(level) {
@@ -49,6 +50,10 @@
       if (n.type === "column" && n.sheet) {
         var parentId = "sheet:" + n.sheet;
         if (nodeOk[parentId]) data.parent = parentId;
+      }
+      if (n.type === "step" && n.query) {
+        var qid = "query:" + n.query;
+        if (nodeOk[qid]) data.parent = qid;
       }
       els.push({ data: data, classes: n.type });
     });
@@ -73,6 +78,7 @@
       { selector: "node.query", style: { "shape": "round-tag" } },
       { selector: "node.source", style: { "shape": "barrel" } },
       { selector: "node.range", style: { "shape": "cut-rectangle" } },
+      { selector: "node.step", style: { "shape": "ellipse" } },
       // Sheet acts as a container box when it holds columns (L2/L3).
       { selector: ":parent", style: {
         "background-color": "data(color)", "background-opacity": 0.12,
@@ -165,9 +171,11 @@
       previewHtml = n.type === "sheet"
         ? sheetPreviewHtml(n.preview)
         : columnPreviewHtml(n.preview);
+    } else if (n.type === "step" && n.expr) {
+      previewHtml = "<div class=\"muted\">Mステップ式</div><pre>" + esc(n.expr) + "</pre>";
     }
     var rows = Object.keys(n).filter(function (k) {
-      return k !== "id" && k !== "preview";
+      return k !== "id" && k !== "preview" && k !== "expr";
     }).map(function (k) {
         var v = n[k];
         if (typeof v === "object") v = JSON.stringify(v);

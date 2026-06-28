@@ -6,7 +6,7 @@ import openpyxl
 from xlsx_flow.model import Model, Node, Edge
 from xlsx_flow.parser.sheets import classify_sheet, recover_headers
 from xlsx_flow.parser.formulas import extract_references, cell_to_column_index
-from xlsx_flow.parser.powerquery import extract_powerquery
+from xlsx_flow.parser.powerquery import extract_powerquery, decompose_steps
 from xlsx_flow.parser.preview import sheet_preview, column_preview
 
 
@@ -64,6 +64,19 @@ def analyze(xlsx_path: str) -> Model:
         for ref in q.refs:
             model.add_edge(Edge(source=f"query:{ref}", target=f"query:{q.name}",
                                 edge_type="dataflow", granularity="pq"))
+
+        # Decompose the let-body into M steps (only worth showing for >=2).
+        steps = decompose_steps(q.m_code)
+        if len(steps) >= 2:
+            for idx, st in enumerate(steps):
+                model.add_node(Node(id=f"step:{q.name}/{st.name}", type="step",
+                                    attrs={"query": q.name, "name": st.name,
+                                           "index": idx, "expr": st.expr}))
+            for st in steps:
+                for ref in st.refs:
+                    model.add_edge(Edge(source=f"step:{q.name}/{ref}",
+                                        target=f"step:{q.name}/{st.name}",
+                                        edge_type="dataflow", granularity="step"))
 
     # --- Workbook / sheets layer ---
     try:
