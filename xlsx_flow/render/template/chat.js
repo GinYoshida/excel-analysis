@@ -70,6 +70,101 @@
     return parts.length ? parts.join("") : "(テキスト応答がありません)";
   }
 
+  var KEY_STORAGE = "xlsxflow_anthropic_key";
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function initChat() {
+    if (typeof document === "undefined") return;
+    var el = document.getElementById("chat");
+    if (!el) return;
+    var keyInput = document.getElementById("chat-key");
+    var log = document.getElementById("chat-log");
+    var input = document.getElementById("chat-input");
+    var history = [];
+
+    var saved = null;
+    try { saved = window.localStorage.getItem(KEY_STORAGE); } catch (e) {}
+    if (saved) keyInput.value = saved;
+
+    function append(role, text) {
+      var d = document.createElement("div");
+      d.className = "chat-msg chat-" + role;
+      d.innerHTML = "<b>" + (role === "user" ? "あなた" : role === "error" ? "エラー" : "AI")
+        + ":</b> " + esc(text);
+      log.appendChild(d);
+      log.scrollTop = log.scrollHeight;
+      return d;
+    }
+
+    function saveKey() {
+      try { window.localStorage.setItem(KEY_STORAGE, keyInput.value.trim()); } catch (e) {}
+    }
+    document.getElementById("chat-key-save").addEventListener("click", saveKey);
+    document.getElementById("chat-key-clear").addEventListener("click", function () {
+      keyInput.value = "";
+      try { window.localStorage.removeItem(KEY_STORAGE); } catch (e) {}
+    });
+
+    function send(text) {
+      var key = keyInput.value.trim();
+      if (!key) { append("error", "APIキーを入力してください。"); return; }
+      if (!text) return;
+      // 選択中ノードがあれば文脈を付与
+      var sel = window.__selectedNodeId;
+      var userText = sel ? (text + "\n\n（選択中の要素: " + sel + "）") : text;
+      append("user", text);
+      var pending = append("assistant", "…");
+      var req = buildRequest(window.MODEL, history, userText);
+      fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": key,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify(req),
+      }).then(function (r) {
+        return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
+      }).then(function (res) {
+        if (!res.ok) {
+          var msg = (res.j && res.j.error && res.j.error.message) || ("HTTP " + res.status);
+          pending.remove(); append("error", msg); return;
+        }
+        var answer = extractText(res.j);
+        pending.remove();
+        append("assistant", answer);
+        history.push({ role: "user", content: userText });
+        history.push({ role: "assistant", content: answer });
+      }).catch(function (err) {
+        pending.remove(); append("error", String(err));
+      });
+    }
+
+    document.getElementById("chat-send").addEventListener("click", function () {
+      var t = input.value.trim(); input.value = ""; send(t);
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { var t = input.value.trim(); input.value = ""; send(t); }
+    });
+    var sugg = document.querySelectorAll(".chat-suggest");
+    for (var i = 0; i < sugg.length; i++) {
+      sugg[i].addEventListener("click", function () { send(this.getAttribute("data-q")); });
+    }
+  }
+
+  if (typeof document !== "undefined") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initChat);
+    } else {
+      initChat();
+    }
+  }
+
   return { DEFAULT_MODEL: DEFAULT_MODEL, compactModel: compactModel,
     buildRequest: buildRequest, extractText: extractText,
     SYSTEM_PROMPT: SYSTEM_PROMPT };

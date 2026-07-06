@@ -24,10 +24,32 @@
 <div id="warnings">__WARNINGS_HTML__</div>
 <div id="main">
   <div id="cy"></div>
-  <div id="detail"><h3>詳細</h3><div>ノードをクリックすると表示されます。</div></div>
+  <div id="side">
+    <div id="detail"><h3>詳細</h3><div>ノードをクリックすると表示されます。</div></div>
+    <div id="chat">
+      <div id="chat-head">AIに質問 <span class="chat-note">※内容がAnthropic APIへ送信されます</span></div>
+      <div id="chat-key-row">
+        <input id="chat-key" type="password" placeholder="Anthropic APIキー (sk-ant-...)">
+        <button id="chat-key-save">保存</button>
+        <button id="chat-key-clear" title="キー削除">×</button>
+      </div>
+      <div id="chat-log"></div>
+      <div id="chat-suggest">
+        <button class="chat-suggest" data-q="このワークブック全体の用途とデータフローの概要を教えて">全体概要</button>
+        <button class="chat-suggest" data-q="選択中（または主要な）シートは何をするシートか説明して">このシートは？</button>
+        <button class="chat-suggest" data-q="PowerQueryと主要な数式が何をしているか平易に説明して">PQ・数式の説明</button>
+        <button class="chat-suggest" data-q="notesに含まれる自然言語メモを整形して要点をまとめて">メモを整形</button>
+      </div>
+      <div id="chat-input-row">
+        <input id="chat-input" type="text" placeholder="質問を入力…">
+        <button id="chat-send">送信</button>
+      </div>
+    </div>
+  </div>
 </div>
 <script>__CYTOSCAPE_JS__</script>
 <script>var MODEL = __MODEL_JSON__;</script>
 <script>__APP_JS__</script>
+<script>__CHAT_JS__</script>
 </body>
 </html>

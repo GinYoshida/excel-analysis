@@ -45,3 +45,17 @@ def test_render_escapes_script_close_in_model():
     assert "</script><img" not in html
     # The escaped form is present instead.
     assert "<\\/script><img" in html
+
+
+def test_render_includes_chat_panel_and_grounding(tmp_path):
+    from xlsx_flow.parser.workbook import analyze
+    from xlsx_flow.render.html import render_html
+    from samples.gen_sample import generate
+    out = tmp_path / "s.xlsx"
+    generate(str(out))
+    html = render_html(analyze(str(out)))
+    assert 'id="chat"' in html                     # チャットパネル
+    assert 'id="chat-key"' in html                 # APIキー入力
+    assert "anthropic-dangerous-direct-browser-access" in html  # 直呼出ヘッダ
+    assert "claude-opus-4-8" in html               # 既定モデル
+    assert '"notes"' in html                        # grounding に notes 同梱

@@ -31,6 +31,7 @@ def render_html(model: Model) -> str:
         "__STYLE_CSS__": _read("style.css"),
         "__CYTOSCAPE_JS__": _read("cytoscape.min.js"),
         "__APP_JS__": _read("app.js"),
+        "__CHAT_JS__": _read("chat.js"),
         "__MODEL_JSON__": model_json,
         "__WARNINGS_HTML__": _warnings_html(model.warnings),
     }
