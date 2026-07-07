@@ -149,6 +149,7 @@
       var t = input.value.trim(); input.value = ""; send(t);
     });
     input.addEventListener("keydown", function (e) {
+      if (e.isComposing) return;  // IME変換確定のEnterでは送信しない
       if (e.key === "Enter") { var t = input.value.trim(); input.value = ""; send(t); }
     });
     var sugg = document.querySelectorAll(".chat-suggest");
