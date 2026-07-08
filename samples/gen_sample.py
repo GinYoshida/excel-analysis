@@ -88,6 +88,11 @@ def _build_workbook() -> openpyxl.Workbook:
     ]:
         ws.append([month, shop, val])
 
+    # 自然言語メモ（AIエージェント検証用）: 長文セルとセルコメント
+    from openpyxl.comments import Comment
+    ws["E1"] = "このシートは各店舗の月次売上を手入力で記録する元データ表です"
+    ws["C1"].comment = Comment("売上は税抜・単位は千円で入力すること", "運用担当")
+
     # Sheet 2: 売上集計 (formula, merged 3-col header, references 生データ)
     ws = wb.create_sheet("売上集計")
     ws["A1"] = "店舗"

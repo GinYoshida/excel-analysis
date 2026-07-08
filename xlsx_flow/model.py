@@ -39,6 +39,7 @@ class Model:
     nodes: list[Node] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    notes: list[dict] = field(default_factory=list)
 
     def add_node(self, node: Node) -> None:
         self.nodes.append(node)
@@ -60,6 +61,7 @@ class Model:
             "nodes": [n.to_dict() for n in self.nodes],
             "edges": [e.to_dict() for e in self.edges],
             "warnings": list(self.warnings),
+            "notes": list(self.notes),
         }
 
     def to_json(self, indent: int = 2) -> str:

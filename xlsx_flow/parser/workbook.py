@@ -9,6 +9,7 @@ from xlsx_flow.parser.formulas import (
     extract_references, cell_to_column_index, extract_cell_dependencies)
 from xlsx_flow.parser.powerquery import extract_powerquery, decompose_steps
 from xlsx_flow.parser.preview import sheet_preview, column_preview
+from xlsx_flow.parser.notes import extract_notes, NOTES_BUDGET
 
 
 def _col_id(sheet: str, header_path: list[str]) -> str:
@@ -106,6 +107,10 @@ def analyze(xlsx_path: str) -> Model:
                     attrs={"sheet": ws.title, "header_path": c.header_path,
                            "is_formula": c.is_formula, "confidence": c.confidence,
                            "preview": column_preview(ws, c.col_index, c.data_start)}))
+            for note in extract_notes(ws):
+                if len(model.notes) >= NOTES_BUDGET:
+                    break
+                model.notes.append(note)
         except Exception as exc:  # noqa: BLE001 - record, never crash
             model.warn(f"シート '{ws.title}' の解析に失敗: {exc}")
 
@@ -167,6 +172,9 @@ def analyze(xlsx_path: str) -> Model:
 
     # --- L3: cell/range-level formula dependencies (capped to avoid blowup) ---
     _add_cell_dependencies(model, wb, sheet_titles)
+
+    if len(model.notes) >= NOTES_BUDGET:
+        model.warn(f"自然言語メモは上限({NOTES_BUDGET})に達したため一部のみ収集しました")
 
     return model
 

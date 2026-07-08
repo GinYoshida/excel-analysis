@@ -172,6 +172,7 @@
 
   cy.on("tap", "node", function (evt) {
     var n = evt.target.data("raw");
+    window.__selectedNodeId = evt.target.id();
     if (!n) return;  // compound parents created implicitly still carry raw
     var previewHtml = "";
     if (n.preview) {
